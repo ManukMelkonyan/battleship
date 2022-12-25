@@ -1,90 +1,182 @@
-import React from "react";
-import "./Battleship.scss";
-import Cell from "./Cell";
+import React, { useEffect, useMemo, useState } from "react";
 
-const shipTypes = {
-  aircraft: {
-    size: 5,
-  },
-  battleship: {
-    size: 4,
-  },
-  submarine: {
-    size: 3,
-  },
-  cruiser: {
-    size: 3,
-  },
-  destroyer: {
-    size: 2,
-  },
-};
+import Cell from "./Cell";
+import Ship from "./Ship";
+import ShipSelector from "./ShipSelector";
+
+import "./Battleship.scss";
+
+import { ORIENTATION } from "./constants";
+import ShipSkeleton from "./ShipSkeleton";
+
 const Battlefield = ({
+  editable = true,
   size,
-  boardConfig = {
-    aircraft: {
-      cells: [
-        [1, 1],
-        [1, 2],
-        [1, 3],
-        [1, 4],
-        [1, 5],
-      ],
-    },
-    battleship: {
-      cells: [
-        [3, 2],
-        [4, 2],
-        [5, 2],
-        [6, 2],
-      ],
-    },
-    submarine: {
-      cells: [
-        [5, 6],
-        [5, 7],
-        [5, 8],
-      ],
-    },
-    cruiser: {
-      cells: [
-        [7, 8],
-        [8, 8],
-        [9, 8],
-      ],
-    },
-    destroyer: {
-      cells: [
-        [1, 9],
-        [2, 9],
-      ],
-    },
-  },
+  boardConfig,
+  setBoardConfig,
 }) => {
   const [n, m] = size;
-  const board = new Array(n).fill().map(() => new Array(m).fill(0));
-  for (const ship in boardConfig) {
-    for (const [i, j] of boardConfig[ship].cells) {
-      board[i][j] = 1;
+  const [selectedShip, setSelectedShip] = useState(null);
+  const [rotating, setRotating] = useState(false);
+  const [shipSkeleton, setShipSkeleton] = useState(null);
+
+  const boardCells = useMemo(() => {
+    const board = new Array(n).fill().map(() => new Array(m).fill(0));
+    Object.keys(boardConfig)
+      .filter((id) => id !== selectedShip && !id.startsWith("unset"))
+      .forEach((id) => {
+        const ship = boardConfig[id];
+        const [startRow, startCol] = id.split(":").map((e) => Number(e));
+        if (ship.orientation === ORIENTATION.HORIZONTAL) {
+          for (let j = 0; j < ship.size; ++j) {
+            board[startRow][startCol + j] = 1;
+          }
+        } else if (ship.orientation === ORIENTATION.VERTICAL) {
+          for (let i = 0; i < ship.size; ++i) {
+            board[startRow + i][startCol] = 1;
+          }
+        }
+      });
+    return board;
+  }, [boardConfig, selectedShip, n, m]);
+  const placeShip = (shipId) => {
+    const oldShip = { ...boardConfig[selectedShip] };
+    delete boardConfig[selectedShip];
+    boardConfig[shipId] = oldShip;
+    if (rotating) {
+      boardConfig[shipId].orientation =
+        boardConfig[shipId].orientation === ORIENTATION.HORIZONTAL
+          ? ORIENTATION.VERTICAL
+          : ORIENTATION.HORIZONTAL;
     }
-  }
-  console.log(board);
+    setBoardConfig({ ...boardConfig });
+    setShipSkeleton(null);
+    setSelectedShip(null);
+    setRotating(false);
+  };
+  const isValidShipPoisition = (shipId) => {
+    const shipObj = boardConfig[selectedShip];
+    const [startRow, startCol] = shipId.split(":").map((e) => Number(e));
+
+    const isValidRow = (row) => row >= 0 && row < n;
+    const isValidCol = (col) => col >= 0 && col < m;
+    const orientation = rotating
+      ? shipObj.orientation === ORIENTATION.HORIZONTAL
+        ? ORIENTATION.VERTICAL
+        : ORIENTATION.HORIZONTAL
+      : shipObj.orientation;
+
+    if (!isValidRow(startRow) || !isValidCol(startCol)) return false;
+
+    const checkAllNeighbors = (row, col) => {
+      for (let i = -1; i <= 1; ++i) {
+        for (let j = -1; j <= 1; ++j) {
+          const newRow = row + i;
+          const newCol = col + j;
+          if (!isValidRow(newRow) || !isValidCol(newCol)) continue;
+          if (boardCells[newRow][newCol]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    const shipObjectCells = [];
+    if (orientation === ORIENTATION.HORIZONTAL) {
+      for (let j = 0; j < shipObj.size; ++j) {
+        const nextCol = startCol + j;
+        if (!isValidCol(nextCol)) return false;
+        shipObjectCells.push([startRow, nextCol]);
+      }
+    } else if (orientation === ORIENTATION.VERTICAL) {
+      for (let i = 0; i < shipObj.size; ++i) {
+        const nextRow = startRow + i;
+        if (!isValidRow(nextRow)) return false;
+        shipObjectCells.push([nextRow, startCol]);
+      }
+    }
+
+    return shipObjectCells.every(([i, j]) => {
+      return checkAllNeighbors(i, j);
+    });
+  };
   const rows = new Array(n).fill().map((row, i) => {
     return (
       <div key={i} className="row">
         {new Array(m).fill().map((col, j) => {
+          const id = `${i}:${j}`;
           return (
-            <Cell
-              key={`${i},${j}`}
-              options={{ i, j, isShipCell: board[i][j] }}
-            />
+            <div key={id} className="position-relative">
+              <Cell
+                id={id}
+                onMouseOver={(id) => {
+                  if (!editable) return;
+                  if (selectedShip) {
+                    setShipSkeleton(id);
+                  }
+                }}
+                onClick={(id) => {
+                  if (!editable) return;
+                  if (selectedShip && isValidShipPoisition(id)) {
+                    placeShip(id);
+                  }
+                }}
+                options={{ i, j }}
+              />
+              {selectedShip !== id && boardConfig[id] && (
+                <Ship
+                  id={id}
+                  editable={editable}
+                  selectedShip={selectedShip}
+                  setSelectedShip={setSelectedShip}
+                  setShipSkeleton={setShipSkeleton}
+                  size={boardConfig[id].size}
+                  orientation={boardConfig[id].orientation}
+                />
+              )}
+
+              {selectedShip && id === shipSkeleton && (
+                <ShipSkeleton
+                  id={id}
+                  rotating={rotating}
+                  size={boardConfig[selectedShip].size}
+                  orientation={boardConfig[selectedShip].orientation}
+                  isValid={isValidShipPoisition(id)}
+                />
+              )}
+            </div>
           );
         })}
       </div>
     );
   });
 
-  return <div className="battlefield">{rows}</div>;
+  useEffect(() => {
+    const keyDownListener = (e) => {
+      if (e.code === "KeyR" && selectedShip) {
+        setRotating((rotating) => !rotating);
+      }
+    };
+    document.addEventListener("keydown", keyDownListener);
+    return () => {
+      document.removeEventListener("keydown", keyDownListener);
+    };
+  }, [selectedShip]);
+
+  return (
+    <div className="main-layout">
+      {editable && (
+        <ShipSelector
+          boardState={boardConfig}
+          selectedShip={selectedShip}
+          setSelectedShip={setSelectedShip}
+          setShipSkeleton={setShipSkeleton}
+        />
+      )}
+      <div className="battlefield">{rows}</div>
+    </div>
+  );
 };
 
 export default Battlefield;

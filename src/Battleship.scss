@@ -1,6 +1,27 @@
+$cell-size: 30px;
+$cell-border: 1px solid rgb(178, 186, 248);
+
+$border-transparent: 1px solid transparent;
+
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.position-relative {
+  position: relative;
+}
+
 .battlefield {
   margin: 50px;
-  border: 1px solid rgb(37, 57, 207);
+  border: $cell-border;
 }
 
 .row {
@@ -8,12 +29,98 @@
 }
 
 .cell {
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgb(37, 57, 207);
-  background-color: aqua;
+  width: $cell-size;
+  height: $cell-size;
+  border: $cell-border;
+  background-color: rgb(228, 253, 253);
+  &-placeholder {
+    opacity: 0;
+    z-index: 2;
+    left: 0;
+    top: 0;
+    position: absolute;
+  }
 }
 
 .ship {
-  background-color: rgb(46, 93, 234);
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  display: flex;
+  background-color: aqua;
+  border: 1px solid blue;
+  cursor: pointer;
+
+  &-option { 
+    position: relative;
+    z-index: unset; 
+    margin-left: 10px;
+    &-used {
+      border: 1px dotted rgb(130, 119, 119);
+      background-color: white;
+    }
+  }
+
+  &-selected {
+    background-color: aqua;
+    opacity: 0.4;
+  }
+
+  &-skeleton {
+    opacity: 0.2;
+    z-index: 2;
+    pointer-events: none;
+    &-invalid {
+      background-color: red;
+      border: 1px solid rgb(91, 17, 17);
+      opacity: 0.5;
+    }
+  }
+
+  &-vertical {
+    flex-direction: column;
+    div {
+      border-top: $border-transparent;
+      border-bottom: $border-transparent;
+    }
+
+    div:first-child {
+      border-top: none;
+    }
+    div:last-child {
+      border-top: none;
+    }
+  }
+  &-horizontal {
+    flex-direction: row;
+    div {
+      border-left: $border-transparent;
+      border-right: $border-transparent;
+    }
+
+    div:first-child {
+      border-left: none;
+    }
+    div:last-child {
+      border-right: none;
+    }
+  }
+  div {
+    width: $cell-size;
+    height: $cell-size;
+  }
 }
+
+.ship-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  .size-group {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    margin: 10px;
+  }
+}
+

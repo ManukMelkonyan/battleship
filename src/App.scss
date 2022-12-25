@@ -1,0 +1,35 @@
+.control-panel {
+  display: flex;
+  justify-content: center;
+  
+
+  button {
+    background-color: rgb(24, 23, 94);
+    border: 1px solid white;
+    border-radius: 10px 10px;
+    color: white;
+    min-height: 40px;
+    transition: all 0.2s;
+  
+    min-width: 100px;
+
+    &:enabled:hover {
+      background-color: white;
+      border-color: rgb(24, 23, 94);
+      color: rgb(24, 23, 94);
+      cursor: pointer;
+    }
+    &:enabled:active {
+      background-color: rgba(64, 63, 126, 0.356);
+      border-color: rgb(107, 106, 206);
+    }
+    &:disabled {
+      border: 1px solid rgb(24, 23, 94);
+      background-color: rgb(24, 23, 94);
+      color: #666666;
+      cursor: no-drop;
+    }
+  }
+  
+  
+}
