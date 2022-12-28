@@ -20,5 +20,11 @@
   "homepage": "https://github.com/ManukMelkonyan/Battleship#readme",
   "devDependencies": {
     "nodemon": "^2.0.20"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "joi": "^17.7.0",
+    "socketter": "^1.0.0",
+    "uuid": "^9.0.0"
   }
 }
