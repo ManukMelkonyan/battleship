@@ -3,7 +3,7 @@ $cell-border: 1px solid rgb(178, 186, 248);
 
 $border-transparent: 1px solid transparent;
 
-.main-layout {
+.flex-center {
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -68,7 +68,6 @@ $border-transparent: 1px solid transparent;
   }
 
   &-skeleton {
-    opacity: 0.2;
     z-index: 2;
     pointer-events: none;
     &-invalid {
@@ -124,3 +123,9 @@ $border-transparent: 1px solid transparent;
   }
 }
 
+.apponent-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // min-width: 422px;
+}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import Battlefield from "./Battlefield";
+import BoardEditor from "./BoardEditor";
 import { ORIENTATION } from "./constants";
 
 const defaultSizeCountMap = {
@@ -35,6 +35,7 @@ function App() {
   const [boardConfig, setBoartConfig] = useState(defaultConfig);
   const [editable, setEditable] = useState(true);
 
+  console.log(boardConfig);
   const isBoardReady = useMemo(
     () => Object.keys(boardConfig).every((key) => !key.startsWith("unset")),
     [boardConfig]
@@ -43,7 +44,7 @@ function App() {
   const resetBoard = () => {
     setBoartConfig({ ...defaultConfig });
     setEditable(true);
-  }
+  };
 
   return (
     <div>
@@ -57,15 +58,17 @@ function App() {
         ⚓ Battleship game ⚓
       </h2>
       <div
+        className=""
         style={{
           margin: "auto",
           width: "30%",
+          textAlign: "center",
           display: "flex",
           justifyContent: "center",
         }}
       >
         <div className="flex-column">
-          <Battlefield
+          <BoardEditor
             size={[10, 10]}
             boardConfig={boardConfig}
             setBoardConfig={setBoartConfig}
@@ -74,13 +77,23 @@ function App() {
           {/* <Battlefield size={[10, 10]} /> */}
           <div className="control-panel">
             <button onClick={resetBoard}>Reset</button>
-            <button disabled={!isBoardReady} onClick={() => {
-              setEditable(false);
-            }}>
-              Ready
+            <button
+              disabled={!isBoardReady}
+              onClick={() => {
+                setEditable((isEditable) => !isEditable);
+              }}
+            >
+              {editable ? "Ready" : "Not ready"}
             </button>
           </div>
         </div>
+        {isBoardReady && !editable && (
+          <div className="apponent-container">
+            <span className="">Find an opponent</span>
+            
+            {/* <div >Spinner</div> */}
+          </div>
+        )}
       </div>
     </div>
   );

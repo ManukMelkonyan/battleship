@@ -9,7 +9,7 @@ import "./Battleship.scss";
 import { ORIENTATION } from "./constants";
 import ShipSkeleton from "./ShipSkeleton";
 
-const Battlefield = ({
+const BoardEditor = ({
   editable = true,
   size,
   boardConfig,
@@ -165,7 +165,7 @@ const Battlefield = ({
   }, [selectedShip]);
 
   return (
-    <div className="main-layout">
+    <div className="flex-center">
       {editable && (
         <ShipSelector
           boardState={boardConfig}
@@ -179,4 +179,4 @@ const Battlefield = ({
   );
 };
 
-export default Battlefield;
+export default BoardEditor;

@@ -1,6 +1,10 @@
-const { createClient } = require("redis");
-const client = createClient();
-client.connect().then(async () => {
-  console.log(await client.get("board:1"));
+const Joi = require("joi");
+
+const dataJson = JSON.parse('{ "type": "move", "body": "" }');
+const schema = Joi.object().keys({
+  type: Joi.string().valid("boardConfig", "move").required(),
+  body: Joi.object().required(),
 });
-// client.connect();
+
+console.log(dataJson);
+console.log(schema.validate(dataJson));
