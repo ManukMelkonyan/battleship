@@ -26,6 +26,7 @@ class DataHandler {
   }
 
   endGame = (statusCode) => {
+    console.trace('end game trace');
     this.socket.close(statusCode);
     this.opponetSocket.close(statusCode);
   }
@@ -48,7 +49,7 @@ class DataHandler {
 
   handleBoard = (body) => {
     const res = validateBoardConfig(body);
-    if (!res) this.socket.close(1003);
+    if (!res) this.endGame(1003);
     const playerObj = this.gameObj.players[this.playerId];
     playerObj.board = res;
     playerObj.readyState = READY_STATE.READY;
@@ -60,7 +61,7 @@ class DataHandler {
 
   handleMove = (body) => {
     const { board } = this.gameObj.players[this.playerId];
-    if (!validateMove(body, board)) this.socket.close();
+    if (!validateMove(body, board)) this.endGame();
   };
 
   handleMessage = (message) => {

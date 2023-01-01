@@ -55,6 +55,8 @@ const validateBoardConfig = (boardConfig) => {
     return true;
   };
 
+  const isPositionFree = (row, col, size) => {};
+
   const sizeCounts = Object.keys(sizeCountMap).reduce((acc, key) => {
     acc[key] = 0;
     return acc;
@@ -69,12 +71,14 @@ const validateBoardConfig = (boardConfig) => {
     if (orientation === ORIENTATION.HORIZONTAL) {
       if (!isValidCoordinates(row, col + size - 1)) return false;
       for (let j = 0; j < size; ++j) {
+        // this is wrong cause when you fill a cell it's being checked by the 'checkAllNeighbors' and it aborts as it's busy cell
         if (!checkAllNeighbors(row, col + j)) return false;
         board[row][col + j] = 1;
       }
     } else if (orientation === ORIENTATION.VERTICAL) {
       if (!isValidCoordinates(row + size - 1, col)) return false;
       for (let i = 0; i < size; ++i) {
+        // this is wrong cause when you fill a cell it's being checked by the 'checkAllNeighbors' and it aborts as it's busy cell
         if (!checkAllNeighbors(row + i, col)) return false;
         board[row + 1][col] = 1;
       }
