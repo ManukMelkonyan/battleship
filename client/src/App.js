@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import BoardEditor from "./BoardEditor";
 import { ORIENTATION } from "./constants";
+import { ReactComponent as Spinner } from "./Assets/spinner.svg";
 
 const defaultSizeCountMap = {
   4: 1,
@@ -34,6 +35,7 @@ function App() {
   );
   const [boardConfig, setBoartConfig] = useState(defaultConfig);
   const [editable, setEditable] = useState(true);
+  // const [fetching, setFetching] = useState(false);
 
   console.log(boardConfig);
   const isBoardReady = useMemo(
@@ -85,13 +87,63 @@ function App() {
             >
               {editable ? "Ready" : "Not ready"}
             </button>
+            <button
+              onClick={() =>
+                setBoartConfig({
+                  "4:7": {
+                    size: 3,
+                    orientation: "HORIZONTAL",
+                  },
+                  "5:1": {
+                    size: 2,
+                    orientation: "HORIZONTAL",
+                  },
+                  "0:8": {
+                    size: 2,
+                    orientation: "HORIZONTAL",
+                  },
+                  "0:5": {
+                    size: 2,
+                    orientation: "VERTICAL",
+                  },
+                  "0:0": {
+                    size: 4,
+                    orientation: "VERTICAL",
+                  },
+                  "0:2": {
+                    size: 1,
+                    orientation: "HORIZONTAL",
+                  },
+                  "2:2": {
+                    size: 1,
+                    orientation: "HORIZONTAL",
+                  },
+                  "2:7": {
+                    size: 1,
+                    orientation: "HORIZONTAL",
+                  },
+                  "2:9": {
+                    size: 1,
+                    orientation: "HORIZONTAL",
+                  },
+                  "5:4": {
+                    size: 3,
+                    orientation: "VERTICAL",
+                  },
+                })
+              }
+            >
+              Randomize
+            </button>
           </div>
         </div>
         {isBoardReady && !editable && (
-          <div className="apponent-container">
-            <span className="">Find an opponent</span>
-            
-            {/* <div >Spinner</div> */}
+          <div className="control-panel">
+            <div>
+              {/* <span className="">Find an opponent</span> */}
+              <Spinner />
+              <button>Find an opponent</button>
+            </div>
           </div>
         )}
       </div>

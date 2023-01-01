@@ -16,4 +16,8 @@ module.exports = {
     PENDING_BOARD: 2,
     CLOSED: 3,
   },
+  cellState: {
+    HIDDEN: 0,
+    REVEALED: 1,
+  },
 };

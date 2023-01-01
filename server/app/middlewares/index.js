@@ -55,7 +55,7 @@ class DataHandler {
     playerObj.readyState = READY_STATE.READY;
     const opponentObj = this.gameObj.players[this.opponetId];
     if (opponentObj.readyState === READY_STATE.READY) {
-      startGame();
+      this.startGame();
     }
   };
 

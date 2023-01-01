@@ -44,9 +44,9 @@ socketter(server, async (currentSocket) => {
       currentPlayerId
     );
     const opponentDataHandler = new DataHandler(
-      currentSocket,
+      opponentSocket,
       gameObj,
-      currentPlayerId
+      opponentId
     );
 
     currentSocket.addEventListener("data", currentDataHandler.handleMessage);
