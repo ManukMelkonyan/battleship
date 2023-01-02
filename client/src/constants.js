@@ -1,3 +1,5 @@
+export const BOARD_SIZE = 10;
+
 export const ORIENTATION = {
   HORIZONTAL: "HORIZONTAL",
   VERTICAL: "VERTICAL",

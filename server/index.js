@@ -9,6 +9,7 @@ const {
   pushPlayer,
   createGame,
   removeGame,
+  removePlayer,
   addPlayerSocket,
   getPlayerSocket,
   removePlayerSocket,
@@ -21,37 +22,50 @@ const server = http.createServer();
 socketter(server, async (currentSocket) => {
   const currentPlayerId = `player:${uuid()}`;
   addPlayerSocket(currentPlayerId, currentSocket);
-  const opponentId = popPlayer();
+  
+  const currentDataHandler = new DataHandler(currentSocket, currentPlayerId);
+  // return currentSocket.close(1000);
+  const boardListener = currentDataHandler.handleMessage('boardConfig');
+  
+  currentSocket.addEventListener("data", (data) => {
+    boardListener(data);
+    currentSocket.removeEventListener('data', boardListener);
+  });
+  
+  // const opponentId = popPlayer();
+  // if (!opponentId) {
+  //   console.log("There is no one online :(");
+  //   console.log("Adding player to the queue");
+  //   console.log(`Your id    : ${currentPlayerId}`);
+  //   pushPlayer(currentPlayerId);
+  //   currentSocket.addEventListener("close", () => {
+  //     removePlayer(currentPlayerId);
+  //   });
+  // } else {
+  //   const opponentSocket = getPlayerSocket(opponentId);
+  //   const gameObj = createGame({
+  //     p1: { id: currentPlayerId, socket: currentSocket },
+  //     p2: { id: opponentId, socket: opponentSocket },
+  //   });
 
-  if (!opponentId) {
-    console.log("There is no one online :(");
-    console.log("Adding player to the queue");
-    pushPlayer(currentPlayerId);
-  } else {
-    console.log("Found player for you :D");
-    console.log(`Your id    : ${currentPlayerId}`);
-    console.log(`Opponent id: ${opponentId}`);
-    const opponentSocket = getPlayerSocket(opponentId);
-    const gameObj = createGame({
-      p1: { id: currentPlayerId, socket: currentSocket },
-      p2: { id: opponentId, socket: opponentSocket },
-    });
-    console.log(gameObj);
+  //   console.log("Found player for you :D");
+  //   console.log(`Your id    : ${currentPlayerId}`);
+  //   console.log(`Opponent id: ${opponentId}`);
+  //   console.log(gameObj);
 
-    const currentDataHandler = new DataHandler(
-      currentSocket,
-      gameObj,
-      currentPlayerId
-    );
-    const opponentDataHandler = new DataHandler(
-      opponentSocket,
-      gameObj,
-      opponentId
-    );
-
-    currentSocket.addEventListener("data", currentDataHandler.handleMessage);
-    opponentSocket.addEventListener("data", opponentDataHandler.handleMessage);
-  }
+  //   const currentDataHandler = new DataHandler(
+  //     currentSocket,
+  //     currentPlayerId,
+  //     gameObj
+  //   );
+  //   const opponentDataHandler = new DataHandler(
+  //     opponentSocket,
+  //     opponentId,
+  //     gameObj
+  //   );
+  //   currentSocket.addEventListener("data", currentDataHandler.handleMove);
+  //   opponentSocket.addEventListener("data", opponentDataHandler.handleMove);
+  // }
 });
 
 server.listen(PORT, () => {

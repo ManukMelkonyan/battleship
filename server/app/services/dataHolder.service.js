@@ -17,12 +17,19 @@ const removePlayerSocket = (id) => {
   delete playerIdSocketMap[id];
 };
 
+const removePlayer = (id) => {
+  const index = playersQueue.findIndex(({ id: currentId }) => currentId === id);
+  if (index !== -1) {
+    playersQueue.splice(index);
+  }
+};
+
 const popPlayer = () => {
   return playersQueue.shift();
 };
 
-const pushPlayer = (id) => {
-  return playersQueue.push(id);
+const pushPlayer = (id, board) => {
+  return playersQueue.push({ id, board });
 };
 
 const createGame = ({ p1, p2 }) => {
@@ -34,12 +41,12 @@ const createGame = ({ p1, p2 }) => {
     players: {
       [p1.id]: {
         socket: p1.socket,
-        board: null,
+        board: p1.board,
         readyState: READY_STATE.PENDING_BOARD,
       },
       [p2.id]: {
         socket: p2.socket,
-        board: null,
+        board: p2.board,
         readyState: READY_STATE.PENDING_BOARD,
       },
     },
@@ -60,4 +67,5 @@ module.exports = {
   addPlayerSocket,
   getPlayerSocket,
   removePlayerSocket,
+  removePlayer,
 };

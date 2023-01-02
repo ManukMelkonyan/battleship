@@ -20,7 +20,6 @@ $border-transparent: 1px solid transparent;
 }
 
 .battlefield {
-  margin: 50px;
   border: $cell-border;
 }
 
@@ -123,10 +122,13 @@ $border-transparent: 1px solid transparent;
   }
 }
 
-.apponent-container {
+.opponent-container {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  // min-width: 422px;
+  border: $cell-border;
+  min-width: 322px;
+  height: 100%;
   margin: auto;
 }

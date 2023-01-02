@@ -75,6 +75,7 @@ const validateBoardConfig = (boardConfig) => {
       position: [row, col],
       size,
       orientation,
+      health: size,
     };
 
     if (!isValidCoordinates(row, col));

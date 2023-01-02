@@ -1,6 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+import Board from "./Board";
 import BoardEditor from "./BoardEditor";
-import { ORIENTATION } from "./constants";
+
+import { ORIENTATION, BOARD_SIZE } from "./constants";
+
 import { ReactComponent as Spinner } from "./Assets/spinner.svg";
 
 const defaultSizeCountMap = {
@@ -35,9 +39,89 @@ function App() {
   );
   const [boardConfig, setBoartConfig] = useState(defaultConfig);
   const [editable, setEditable] = useState(true);
-  // const [fetching, setFetching] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [webSocket, setWebSocket] = useState(null);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [isCurrentTurn, setIsCurrentTurn] = useState(false);
 
-  console.log(boardConfig);
+  const sendMessage = (message) => {
+    const stringifiedMessage =
+      typeof message === "object"
+        ? JSON.stringify(message)
+        : message.toString();
+    webSocket.send(stringifiedMessage);
+  };
+
+  const hadnleReveal = (body) => {};
+
+  const handleGameStart = (body) => {};
+
+  const handleGameOver = (body) => {};
+
+  const handleGameAbort = (body) => {};
+
+  const handleMessage = (message) => {
+    try {
+      console.log(message);
+      const messageObj = JSON.parse(message);
+      const { messageType, body } = messageObj;
+      if (messageType === "reveal") {
+        hadnleReveal(body);
+      } else if (messageType === "gameStart") {
+        handleGameStart(body);
+      } else if (messageType === "gameOver") {
+        handleGameOver(body);
+      } else if (messageType === "gameAbort") {
+        handleGameAbort(body);
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const connectToServer = () => {
+    setConnecting(true);
+    const ws = new WebSocket("ws://localhost:8080");
+    setWebSocket(ws);
+  };
+
+  useEffect(() => {
+    if (!webSocket) return;
+    webSocket.onopen = () => {
+      sendMessage({
+        messageType: "boardConfig",
+        body: boardConfig,
+      });
+    };
+    webSocket.onmessage = ({ data }) => {
+      handleMessage(data);
+    };
+
+    webSocket.onclose = () => {
+      setWebSocket(null);
+      setConnecting(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [webSocket]);
+
+  const abortConnection = () => {
+    if (webSocket) {
+      webSocket.close();
+      setWebSocket(null);
+      setConnecting(false);
+    }
+  };
+
+  const handlePlayerPickerClick = () => {
+    if (connecting) {
+      abortConnection();
+    } else {
+      connectToServer();
+    }
+  };
+
+  // console.log(boardConfig);
   const isBoardReady = useMemo(
     () => Object.keys(boardConfig).every((key) => !key.startsWith("unset")),
     [boardConfig]
@@ -69,83 +153,86 @@ function App() {
           justifyContent: "center",
         }}
       >
-        <div className="flex-column">
+        {editable ? (
           <BoardEditor
-            size={[10, 10]}
+            size={[BOARD_SIZE, BOARD_SIZE]}
             boardConfig={boardConfig}
             setBoardConfig={setBoartConfig}
             editable={editable}
           />
-          {/* <Battlefield size={[10, 10]} /> */}
-          <div className="control-panel">
-            <button onClick={resetBoard}>Reset</button>
-            <button
-              disabled={!isBoardReady}
-              onClick={() => {
-                setEditable((isEditable) => !isEditable);
-              }}
-            >
-              {editable ? "Ready" : "Not ready"}
-            </button>
-            <button
-              onClick={() =>
-                setBoartConfig({
-                  "4:7": {
-                    size: 3,
-                    orientation: "HORIZONTAL",
-                  },
-                  "5:1": {
-                    size: 2,
-                    orientation: "HORIZONTAL",
-                  },
-                  "0:8": {
-                    size: 2,
-                    orientation: "HORIZONTAL",
-                  },
-                  "0:5": {
-                    size: 2,
-                    orientation: "VERTICAL",
-                  },
-                  "0:0": {
-                    size: 4,
-                    orientation: "VERTICAL",
-                  },
-                  "0:2": {
-                    size: 1,
-                    orientation: "HORIZONTAL",
-                  },
-                  "2:2": {
-                    size: 1,
-                    orientation: "HORIZONTAL",
-                  },
-                  "2:7": {
-                    size: 1,
-                    orientation: "HORIZONTAL",
-                  },
-                  "2:9": {
-                    size: 1,
-                    orientation: "HORIZONTAL",
-                  },
-                  "5:4": {
-                    size: 3,
-                    orientation: "VERTICAL",
-                  },
-                })
-              }
-            >
-              Randomize
-            </button>
-          </div>
-        </div>
+        ) : (
+          <Board size={[BOARD_SIZE, BOARD_SIZE]} />
+        )}
         {isBoardReady && !editable && (
           <div className="control-panel">
-            <div>
+            <div className="opponent-container">
               {/* <span className="">Find an opponent</span> */}
-              <Spinner />
-              <button>Find an opponent</button>
+              {connecting && <Spinner />}
+              <button onClick={handlePlayerPickerClick}>
+                {connecting ? "Cancel" : "Find an opponent"}
+              </button>
             </div>
           </div>
         )}
+      </div>
+      <div className="control-panel">
+        <button onClick={resetBoard}>Reset</button>
+        <button
+          disabled={!isBoardReady || gameStarted}
+          onClick={() => {
+            setEditable((isEditable) => !isEditable);
+          }}
+        >
+          {editable ? "Ready" : "Not ready"}
+        </button>
+        <button
+          onClick={() =>
+            setBoartConfig({
+              "4:7": {
+                size: 3,
+                orientation: "HORIZONTAL",
+              },
+              "5:1": {
+                size: 2,
+                orientation: "HORIZONTAL",
+              },
+              "0:8": {
+                size: 2,
+                orientation: "HORIZONTAL",
+              },
+              "0:5": {
+                size: 2,
+                orientation: "VERTICAL",
+              },
+              "0:0": {
+                size: 4,
+                orientation: "VERTICAL",
+              },
+              "0:2": {
+                size: 1,
+                orientation: "HORIZONTAL",
+              },
+              "2:2": {
+                size: 1,
+                orientation: "HORIZONTAL",
+              },
+              "2:7": {
+                size: 1,
+                orientation: "HORIZONTAL",
+              },
+              "2:9": {
+                size: 1,
+                orientation: "HORIZONTAL",
+              },
+              "5:4": {
+                size: 3,
+                orientation: "VERTICAL",
+              },
+            })
+          }
+        >
+          Randomize
+        </button>
       </div>
     </div>
   );
