@@ -24,7 +24,6 @@ socketter(server, async (currentSocket) => {
   addPlayerSocket(currentPlayerId, currentSocket);
 
   const currentDataHandler = new DataHandler(currentSocket, currentPlayerId);
-  // return currentSocket.close(1000);
   const boardListener = (data) => {
     currentDataHandler.handleMessage("boardConfig")(data);
     currentSocket.removeEventListener("data", boardListener);

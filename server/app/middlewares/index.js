@@ -39,8 +39,7 @@ class DataHandler {
     this.opponentSocket = getPlayerSocket(this.opponentId);
   };
 
-  endGame = (statusCode) => {
-    console.trace("end game trace");
+  endGame = (statusCode = 1000) => {
     this.currentSocket.close(statusCode);
     this.opponentSocket.close(statusCode);
 
@@ -74,7 +73,6 @@ class DataHandler {
   };
 
   handleClose = (statusCode) => {
-    console.trace("close trace");
     if (this.gameObj) {
       this.endGame(statusCode);
     } else {
@@ -86,11 +84,8 @@ class DataHandler {
     const { valid, value: messageObj } = validateMessage(message);
 
     if (!valid || messageType !== messageObj.messageType) {
-      console.log("Invalid message", message);
       return this.handleClose(1003);
     }
-
-    console.log("Valid message", { messageType, messageObj });
 
     if (messageType === "boardConfig") {
       return this.handleBoard(messageObj.body);
@@ -99,7 +94,6 @@ class DataHandler {
     if (messageType === "move") {
       return this.handleMove(messageObj.body);
     }
-    console.log("Message is not allowed", messageObj);
     return this.handleClose(1003);
   };
 
@@ -108,9 +102,6 @@ class DataHandler {
     if (!currentBoard) return this.handleClose(1003);
     const opponent = popPlayer();
     if (!opponent) {
-      console.log("There is no one online :(");
-      console.log("Adding player to the queue");
-      console.log(`Your id    : ${this.currentPlayerId}`);
       pushPlayer(this.currentPlayerId, currentBoard);
       this.currentSocket.addEventListener("close", () => {
         removePlayer(this.currentPlayerId);
@@ -132,33 +123,23 @@ class DataHandler {
       this.opponentSocket = opponentSocket;
       this.gameObj = gameObj;
 
-      console.log("Found player for you :D");
-      console.log(`Your id    : ${this.currentPlayerId}`);
-      console.log(`Opponent id: ${opponentId}`);
-      console.log(gameObj);
-
-      this.setGame(gameObj);
-
       const opponentDataHandler = new DataHandler(
         opponentSocket,
         opponentId,
         gameObj
       );
       this.currentSocket.addEventListener("data", this.handleMessage("move"));
-      this.opponentSocket.addEventListener(
-        "data",
-        opponentDataHandler.handleMessage("move")
-      );
+      this.opponentSocket.addEventListener("data",opponentDataHandler.handleMessage("move"));
+
+      this.currentSocket.addEventListener('close', (statusCode) => {
+        this.endGame(statusCode);
+      });
+      this.opponentSocket.addEventListener('close', (statusCode) => {
+        this.endGame(statusCode);
+      });
+
       this.startGame();
     }
-
-    // const playerObj = this.gameObj.players[this.playerId];
-    // playerObj.board = res;
-    // playerObj.readyState = READY_STATE.READY;
-    // const opponentObj = this.gameObj.players[this.opponetId];
-    // if (opponentObj.readyState === READY_STATE.READY) {
-    //   this.startGame();
-    // }
   };
 
   handleMove = (body) => {
@@ -243,7 +224,6 @@ class DataHandler {
         }
       }
     }
-    console.log('opponentPlayerObj.shipsLeftCount', opponentPlayerObj.shipsLeftCount);
 
     this.gameObj.turn = isCurrentPlayerTurn
       ? this.currentPlayerId
@@ -283,6 +263,7 @@ class DataHandler {
           },
         }
       );
+      this.endGame(1000);
     }
   };
 }

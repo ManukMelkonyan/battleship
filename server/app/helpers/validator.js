@@ -22,10 +22,6 @@ const validateMessage = (message) => {
   }
 };
 
-// const validateBoard = (boardConfig = {}) => {
-//   const shipIds = Array.from(Object.keys());
-// };
-
 const isValidCoordinates = (row, col) =>
   row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
 
@@ -104,7 +100,6 @@ const validateBoardConfig = (boardConfig) => {
     ([size, count]) => sizeCountMap[size] === count
   );
   if (!areSizeCountsEqual) return false;
-  console.log(board);
   return board;
 };
 
@@ -113,7 +108,6 @@ const validateMove = (body, board) => {
     row: Joi.number().integer().strict(),
     col: Joi.number().integer().strict(),
   });
-  // consoe
   if (schema.validate(body).error) return false;
   const { row, col } = body;
   if (!isValidCoordinates(row, col)) return false;

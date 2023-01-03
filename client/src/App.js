@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import Board from "./Board";
 import BoardEditor from "./BoardEditor";
+import Modal from "react-modal";
 
 import { ORIENTATION, BOARD_SIZE } from "./constants";
+import texts from "./texts.json";
 
 import { ReactComponent as Spinner } from "./Assets/spinner.svg";
 
@@ -68,24 +70,10 @@ function App() {
   const [webSocket, setWebSocket] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [isCurrentPlayerWinner, setIsCurrentPlayerWinner] = useState(false);
   const [isCurrentTurn, setIsCurrentTurn] = useState(false);
-  // getBoardCells(boardConfig);
   const [currentBoard, setCurrentBoard] = useState(null);
   const [opponentBoard, setOpponentBoard] = useState(getBoardCells({}));
-
-  useEffect(() => {
-    if (!isEditing) {
-      setCurrentBoard(getBoardCells(boardConfig));
-    }
-  }, [isEditing, boardConfig]);
-
-  // useEffect(() => {
-  //   if (gameStarted) {
-  //     console.log("started");
-  //     setOpponentBoard(getBoardCells({}));
-  //   }
-  // }, [gameStarted]);
+  const [modalText, setModalText] = useState(null);
 
   const sendMessage = (message) => {
     const stringifiedMessage =
@@ -96,7 +84,6 @@ function App() {
   };
 
   const updateBoard = (revealedCells, isCurrentBoard) => {
-    console.log(currentBoard, opponentBoard);
     const board = isCurrentBoard ? currentBoard : opponentBoard;
     const setBoard = isCurrentBoard ? setCurrentBoard : setOpponentBoard;
     revealedCells.forEach(({ row, col, isShip }) => {
@@ -109,7 +96,6 @@ function App() {
 
   const handleReveal = (body) => {
     const { revealedCells, isCurrentPlayerTurn, isCurrentBoard } = body;
-    console.log(body);
     updateBoard(revealedCells, isCurrentBoard);
     setIsCurrentTurn(isCurrentPlayerTurn);
   };
@@ -122,15 +108,12 @@ function App() {
 
   const handleGameOver = (body) => {
     const { isWinner } = body;
-    setIsCurrentPlayerWinner(isWinner);
+    setModalText(isWinner ? texts.winner_text : texts.loser_text);
     setGameOver(true);
+    setGameStarted(false);
   };
 
-  const handleGameAbort = (body) => {};
-
   const handleMessage = (message) => {
-    // try {
-    console.log(message);
     const messageObj = JSON.parse(message);
     const { messageType, body } = messageObj;
     if (messageType === "reveal") {
@@ -139,12 +122,7 @@ function App() {
       handleGameStart(body);
     } else if (messageType === "gameOver") {
       handleGameOver(body);
-    } else if (messageType === "gameAbort") {
-      handleGameAbort(body);
     }
-    // } catch (err) {
-    //   alert(err.message);
-    // }
   };
 
   const connectToServer = () => {
@@ -152,6 +130,59 @@ function App() {
     const ws = new WebSocket("ws://localhost:8080");
     setWebSocket(ws);
   };
+
+  const abortConnection = () => {
+    if (webSocket) {
+      webSocket.close(1000);
+      setWebSocket(null);
+      setConnecting(false);
+    }
+  };
+
+  const handlePlayerPickerClick = () => {
+    if (connecting) {
+      abortConnection();
+    } else {
+      connectToServer();
+    }
+  };
+
+  const isBoardReady = useMemo(() => {
+    return Object.keys(boardConfig).every((key) => !key.startsWith("unset"));
+  }, [boardConfig]);
+
+  const resetBoard = () => {
+    setIsEdiding(true);
+    setBoartConfig({ ...defaultConfig });
+    setCurrentBoard(getBoardCells({}));
+    setOpponentBoard(getBoardCells({}));
+  };
+
+  const opponentBoardClick = (id) => {
+    if (isCurrentTurn && !gameOver) {
+      const [row, col] = id.split(":").map((e) => Number(e));
+      const cell = opponentBoard[row][col];
+      if (!cell.revealed) {
+        setIsCurrentTurn(false);
+        sendMessage({
+          messageType: "move",
+          body: { row, col },
+        });
+      }
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalText(null);
+    setGameStarted(false);
+    resetBoard();
+  };
+
+  useEffect(() => {
+    if (!isEditing) {
+      setCurrentBoard(getBoardCells(boardConfig));
+    }
+  }, [isEditing, boardConfig]);
 
   useEffect(() => {
     if (!webSocket) return;
@@ -168,75 +199,18 @@ function App() {
     webSocket.onclose = () => {
       setWebSocket(null);
       setConnecting(false);
+      if (gameStarted) {
+        setGameStarted(false);
+        setModalText(texts.connection_lost_text);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [webSocket]);
-
-  const abortConnection = () => {
-    if (webSocket) {
-      webSocket.close();
-      setWebSocket(null);
-      setConnecting(false);
-    }
-  };
-
-  const handlePlayerPickerClick = () => {
-    if (connecting) {
-      abortConnection();
-    } else {
-      connectToServer();
-    }
-  };
-
-  const isBoardReady = useMemo(() => {
-    console.log(boardConfig);
-    console.log(
-      Object.keys(boardConfig).every((key) => !key.startsWith("unset"))
-    );
-    return Object.keys(boardConfig).every((key) => !key.startsWith("unset"));
-  }, [boardConfig]);
-
-  const resetBoard = () => {
-    setBoartConfig({ ...defaultConfig });
-    setIsEdiding(true);
-  };
-
-  const opponentBoardClick = (id) => {
-    if (isCurrentTurn && !gameOver) {
-      const [row, col] = id.split(":").map((e) => Number(e));
-      console.log(row, col);
-      const cell = opponentBoard[row][col];
-      if (!cell.revealed) {
-        setIsCurrentTurn(false);
-        sendMessage({
-          messageType: "move",
-          body: { row, col },
-        });
-      }
-    }
-  };
+  }, [boardConfig, gameStarted, webSocket]);
 
   return (
     <div>
-      <h2
-        style={{
-          margin: "auto",
-          width: "30%",
-          textAlign: "center",
-        }}
-      >
-        ⚓ Battleship game ⚓
-      </h2>
-      <div
-        className=""
-        style={{
-          margin: "auto",
-          width: "30%",
-          textAlign: "center",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
+      <h2 className="game-title">⚓ Battleship game ⚓</h2>
+      <div className="main-layout">
         {isEditing ? (
           <BoardEditor
             size={[BOARD_SIZE, BOARD_SIZE]}
@@ -246,7 +220,7 @@ function App() {
           />
         ) : (
           <Board
-            disabled={isCurrentTurn}
+            disabled={isCurrentTurn || gameOver}
             board={currentBoard}
             footerText="Your board"
           />
@@ -255,7 +229,7 @@ function App() {
           <div className="control-panel">
             {gameStarted ? (
               <Board
-                disabled={!isCurrentTurn}
+                disabled={!isCurrentTurn || gameOver}
                 board={opponentBoard}
                 onCellClick={opponentBoardClick}
                 footerText="Opponent's board"
@@ -273,9 +247,11 @@ function App() {
         )}
       </div>
       <div className="control-panel">
-        <button onClick={resetBoard}>Reset</button>
+        <button disabled={gameStarted || connecting} onClick={resetBoard}>
+          Reset
+        </button>
         <button
-          disabled={!isBoardReady || gameStarted}
+          disabled={!isBoardReady || gameStarted || connecting}
           onClick={() => {
             setIsEdiding((editing) => !editing);
           }}
@@ -283,6 +259,7 @@ function App() {
           {isEditing ? "Ready" : "Not ready"}
         </button>
         <button
+          disabled={gameStarted || connecting}
           onClick={() =>
             setBoartConfig({
               "4:7": {
@@ -331,6 +308,12 @@ function App() {
           Randomize
         </button>
       </div>
+      <Modal ariaHideApp={false} isOpen={!!modalText} className="modal">
+        <div className="control-panel modal-content">
+          <span>{modalText}</span>
+          <button onClick={handleModalClose}>OK</button>
+        </div>
+      </Modal>
     </div>
   );
 }
