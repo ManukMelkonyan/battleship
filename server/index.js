@@ -1,21 +1,13 @@
-require("dotenv").config();
 const http = require("http");
 const { socketter } = require("socketter");
 const { v4: uuid } = require("uuid");
-const { validateMessage } = require("./app/helpers/validator");
-const { PORT, BOARD_SIZE, sizeCountMap } = require("./app/config/constants");
-const {
-  popPlayer,
-  pushPlayer,
-  createGame,
-  removeGame,
-  removePlayer,
-  addPlayerSocket,
-  getPlayerSocket,
-  removePlayerSocket,
-} = require("./app/services/dataHolder.service");
+require("dotenv").config();
 
-const { DataHandler } = require("./app/middlewares");
+const { addPlayerSocket } = require("./app/services/dataHolder.service");
+const DataHandler = require("./app/dataHandler");
+
+const { PORT } = require("./app/config/constants");
+
 
 const server = http.createServer();
 

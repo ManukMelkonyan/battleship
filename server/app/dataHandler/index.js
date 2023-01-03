@@ -1,17 +1,19 @@
-const { READY_STATE, cellState, ORIENTATION } = require("../config/constants");
+const { cellState } = require("../config/constants");
+const {
+  revealBoundingBox,
+  revealDiagonals,
+} = require("../helpers/boardHelpers");
 const { getOpponentId } = require("../helpers/utils");
 const {
   validateMessage,
   validateBoardConfig,
   validateMove,
-  isValidCoordinates,
 } = require("../helpers/validator");
 const {
   popPlayer,
   pushPlayer,
   createGame,
   removeGame,
-  addPlayerSocket,
   getPlayerSocket,
   removePlayerSocket,
   removePlayer,
@@ -129,12 +131,15 @@ class DataHandler {
         gameObj
       );
       this.currentSocket.addEventListener("data", this.handleMessage("move"));
-      this.opponentSocket.addEventListener("data",opponentDataHandler.handleMessage("move"));
+      this.opponentSocket.addEventListener(
+        "data",
+        opponentDataHandler.handleMessage("move")
+      );
 
-      this.currentSocket.addEventListener('close', (statusCode) => {
+      this.currentSocket.addEventListener("close", (statusCode) => {
         this.endGame(statusCode);
       });
-      this.opponentSocket.addEventListener('close', (statusCode) => {
+      this.opponentSocket.addEventListener("close", (statusCode) => {
         this.endGame(statusCode);
       });
 
@@ -152,8 +157,6 @@ class DataHandler {
       if (!validateMove(body, opponentBoard)) return this.handleClose(1003);
 
       this.consumeMove(body, opponentPlayerObj);
-    } else if (currentPlayerReadyState === READY_STATE.CLOSED) {
-      this.handleClose(1001);
     } else {
       this.handleClose(1003);
     }
@@ -174,54 +177,12 @@ class DataHandler {
     if (ship) {
       isCurrentPlayerTurn = true;
       ship.health -= 1;
-      for (let i of [-1, 1]) {
-        for (let j of [-1, 1]) {
-          const diagonalRow = row + i;
-          const diagonalCol = col + j;
-          if (
-            isValidCoordinates(diagonalRow, diagonalCol) &&
-            board[diagonalRow][diagonalCol].state !== cellState.REVEALED
-          ) {
-            board[diagonalRow][diagonalCol].state = cellState.REVEALED;
-            revealedCells.push({
-              row: diagonalRow,
-              col: diagonalCol,
-              isShip: !!board[diagonalRow][diagonalCol].ship,
-            });
-          }
-        }
-      }
-
+      const revealedDiagonalCells = revealDiagonals(row, col, board);
+      revealedCells.push(...revealedDiagonalCells);
       if (ship.health === 0) {
         opponentPlayerObj.shipsLeftCount -= 1;
-        const {
-          position: [startRow, startCol],
-          size,
-          orientation,
-        } = ship;
-
-        const endRow =
-          orientation === ORIENTATION.HORIZONTAL
-            ? startRow + 1
-            : startRow + size;
-        const endCol =
-          orientation === ORIENTATION.VERTICAL ? startCol + 1 : startCol + size;
-
-        for (let i = startRow - 1; i <= endRow; ++i) {
-          for (let j = startCol - 1; j <= endCol; ++j) {
-            if (
-              isValidCoordinates(i, j) &&
-              board[i][j].state !== cellState.REVEALED
-            ) {
-              board[i][j].state = cellState.REVEALED;
-              revealedCells.push({
-                row: i,
-                col: j,
-                isShip: !!board[i][j].ship,
-              });
-            }
-          }
-        }
+        const revealedBoundingBoxCells = revealBoundingBox(ship, board);
+        revealedCells.push(...revealedBoundingBoxCells);
       }
     }
 
@@ -268,6 +229,4 @@ class DataHandler {
   };
 }
 
-module.exports = {
-  DataHandler,
-};
+module.exports = DataHandler;

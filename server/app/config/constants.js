@@ -11,11 +11,6 @@ module.exports = {
     2: 3,
     1: 4,
   },
-  READY_STATE: {
-    READY: 1,
-    PENDING_BOARD: 2,
-    CLOSED: 3,
-  },
   cellState: {
     HIDDEN: 0,
     REVEALED: 1,
