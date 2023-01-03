@@ -22,50 +22,15 @@ const server = http.createServer();
 socketter(server, async (currentSocket) => {
   const currentPlayerId = `player:${uuid()}`;
   addPlayerSocket(currentPlayerId, currentSocket);
-  
+
   const currentDataHandler = new DataHandler(currentSocket, currentPlayerId);
   // return currentSocket.close(1000);
-  const boardListener = currentDataHandler.handleMessage('boardConfig');
-  
-  currentSocket.addEventListener("data", (data) => {
-    boardListener(data);
-    currentSocket.removeEventListener('data', boardListener);
-  });
-  
-  // const opponentId = popPlayer();
-  // if (!opponentId) {
-  //   console.log("There is no one online :(");
-  //   console.log("Adding player to the queue");
-  //   console.log(`Your id    : ${currentPlayerId}`);
-  //   pushPlayer(currentPlayerId);
-  //   currentSocket.addEventListener("close", () => {
-  //     removePlayer(currentPlayerId);
-  //   });
-  // } else {
-  //   const opponentSocket = getPlayerSocket(opponentId);
-  //   const gameObj = createGame({
-  //     p1: { id: currentPlayerId, socket: currentSocket },
-  //     p2: { id: opponentId, socket: opponentSocket },
-  //   });
+  const boardListener = (data) => {
+    currentDataHandler.handleMessage("boardConfig")(data);
+    currentSocket.removeEventListener("data", boardListener);
+  };
 
-  //   console.log("Found player for you :D");
-  //   console.log(`Your id    : ${currentPlayerId}`);
-  //   console.log(`Opponent id: ${opponentId}`);
-  //   console.log(gameObj);
-
-  //   const currentDataHandler = new DataHandler(
-  //     currentSocket,
-  //     currentPlayerId,
-  //     gameObj
-  //   );
-  //   const opponentDataHandler = new DataHandler(
-  //     opponentSocket,
-  //     opponentId,
-  //     gameObj
-  //   );
-  //   currentSocket.addEventListener("data", currentDataHandler.handleMove);
-  //   opponentSocket.addEventListener("data", opponentDataHandler.handleMove);
-  // }
+  currentSocket.addEventListener("data", boardListener);
 });
 
 server.listen(PORT, () => {

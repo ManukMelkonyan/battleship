@@ -4,7 +4,7 @@ import "./Battleship.scss";
 
 import "./App.scss";
 
-const Cell = ({ options, onMouseOver, onClick, id }) => {
+const Cell = ({ className, onMouseOver, onClick, id }) => {
   const handleMouseOver = (e) => {
     onMouseOver && onMouseOver(id);
   };
@@ -15,7 +15,7 @@ const Cell = ({ options, onMouseOver, onClick, id }) => {
     <div
       onMouseOver={handleMouseOver}
       onClick={handleClick}
-      className={`cell`}
+      className={`cell ${className}`}
     ></div>
   );
 };

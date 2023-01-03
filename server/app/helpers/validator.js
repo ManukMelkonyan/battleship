@@ -113,12 +113,16 @@ const validateMove = (body, board) => {
     row: Joi.number().integer().strict(),
     col: Joi.number().integer().strict(),
   });
-  if (schema.validate(body)) return false;
+  // consoe
+  if (schema.validate(body).error) return false;
   const { row, col } = body;
-  return board[row][col] === 0;
+  if (!isValidCoordinates(row, col)) return false;
+  
+  return board[row][col].state === cellState.HIDDEN;
 };
 
 module.exports = {
+  isValidCoordinates,
   validateMove,
   validateMessage,
   validateBoardConfig,

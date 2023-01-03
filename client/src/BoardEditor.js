@@ -10,7 +10,7 @@ import { ORIENTATION } from "./constants";
 import ShipSkeleton from "./ShipSkeleton";
 
 const BoardEditor = ({
-  editable = true,
+  isEditing = true,
   size,
   boardConfig,
   setBoardConfig,
@@ -111,13 +111,13 @@ const BoardEditor = ({
               <Cell
                 id={id}
                 onMouseOver={(id) => {
-                  if (!editable) return;
+                  if (!isEditing) return;
                   if (selectedShip) {
                     setShipSkeleton(id);
                   }
                 }}
                 onClick={(id) => {
-                  if (!editable) return;
+                  if (!isEditing) return;
                   if (selectedShip && isValidShipPoisition(id)) {
                     placeShip(id);
                   }
@@ -127,7 +127,7 @@ const BoardEditor = ({
               {selectedShip !== id && boardConfig[id] && (
                 <Ship
                   id={id}
-                  editable={editable}
+                  editable={isEditing}
                   selectedShip={selectedShip}
                   setSelectedShip={setSelectedShip}
                   setShipSkeleton={setShipSkeleton}
@@ -166,7 +166,7 @@ const BoardEditor = ({
 
   return (
     <div className="flex-center">
-      {editable && (
+      {isEditing && (
         <ShipSelector
           boardState={boardConfig}
           selectedShip={selectedShip}

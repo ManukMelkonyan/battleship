@@ -14,6 +14,31 @@ const defaultSizeCountMap = {
   1: 4,
 };
 
+const getBoardCells = (boardConfig) => {
+  const board = new Array(BOARD_SIZE)
+    .fill()
+    .map(() =>
+      new Array(BOARD_SIZE)
+        .fill()
+        .map(() => ({ revealed: false, isShip: false }))
+    );
+
+  for (const [key, value] of Object.entries(boardConfig)) {
+    const [row, col] = key.split(":").map((e) => Number(e));
+    const { size, orientation } = value;
+    if (orientation === ORIENTATION.HORIZONTAL) {
+      for (let j = 0; j < size; ++j) {
+        board[row][col + j].isShip = true;
+      }
+    } else if (orientation === ORIENTATION.VERTICAL) {
+      for (let i = 0; i < size; ++i) {
+        board[row + i][col].isShip = true;
+      }
+    }
+  }
+  return board;
+};
+
 const getInitialBoardConfig = (sizeCountMap) => {
   const config = {};
   let i = 0;
@@ -38,12 +63,29 @@ function App() {
     []
   );
   const [boardConfig, setBoartConfig] = useState(defaultConfig);
-  const [editable, setEditable] = useState(true);
+  const [isEditing, setIsEdiding] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [webSocket, setWebSocket] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [isCurrentPlayerWinner, setIsCurrentPlayerWinner] = useState(false);
   const [isCurrentTurn, setIsCurrentTurn] = useState(false);
+  // getBoardCells(boardConfig);
+  const [currentBoard, setCurrentBoard] = useState(null);
+  const [opponentBoard, setOpponentBoard] = useState(getBoardCells({}));
+
+  useEffect(() => {
+    if (!isEditing) {
+      setCurrentBoard(getBoardCells(boardConfig));
+    }
+  }, [isEditing, boardConfig]);
+
+  // useEffect(() => {
+  //   if (gameStarted) {
+  //     console.log("started");
+  //     setOpponentBoard(getBoardCells({}));
+  //   }
+  // }, [gameStarted]);
 
   const sendMessage = (message) => {
     const stringifiedMessage =
@@ -53,31 +95,56 @@ function App() {
     webSocket.send(stringifiedMessage);
   };
 
-  const hadnleReveal = (body) => {};
+  const updateBoard = (revealedCells, isCurrentBoard) => {
+    console.log(currentBoard, opponentBoard);
+    const board = isCurrentBoard ? currentBoard : opponentBoard;
+    const setBoard = isCurrentBoard ? setCurrentBoard : setOpponentBoard;
+    revealedCells.forEach(({ row, col, isShip }) => {
+      board[row][col].revealed = true;
+      board[row][col].isShip = isShip;
+    });
 
-  const handleGameStart = (body) => {};
+    setBoard([...board]);
+  };
 
-  const handleGameOver = (body) => {};
+  const handleReveal = (body) => {
+    const { revealedCells, isCurrentPlayerTurn, isCurrentBoard } = body;
+    console.log(body);
+    updateBoard(revealedCells, isCurrentBoard);
+    setIsCurrentTurn(isCurrentPlayerTurn);
+  };
+
+  const handleGameStart = (body) => {
+    const { isCurrentPlayerTurn } = body;
+    setGameStarted(true);
+    setIsCurrentTurn(isCurrentPlayerTurn);
+  };
+
+  const handleGameOver = (body) => {
+    const { isWinner } = body;
+    setIsCurrentPlayerWinner(isWinner);
+    setGameOver(true);
+  };
 
   const handleGameAbort = (body) => {};
 
   const handleMessage = (message) => {
-    try {
-      console.log(message);
-      const messageObj = JSON.parse(message);
-      const { messageType, body } = messageObj;
-      if (messageType === "reveal") {
-        hadnleReveal(body);
-      } else if (messageType === "gameStart") {
-        handleGameStart(body);
-      } else if (messageType === "gameOver") {
-        handleGameOver(body);
-      } else if (messageType === "gameAbort") {
-        handleGameAbort(body);
-      }
-    } catch (err) {
-      alert(err.message);
+    // try {
+    console.log(message);
+    const messageObj = JSON.parse(message);
+    const { messageType, body } = messageObj;
+    if (messageType === "reveal") {
+      handleReveal(body);
+    } else if (messageType === "gameStart") {
+      handleGameStart(body);
+    } else if (messageType === "gameOver") {
+      handleGameOver(body);
+    } else if (messageType === "gameAbort") {
+      handleGameAbort(body);
     }
+    // } catch (err) {
+    //   alert(err.message);
+    // }
   };
 
   const connectToServer = () => {
@@ -121,15 +188,32 @@ function App() {
     }
   };
 
-  // console.log(boardConfig);
-  const isBoardReady = useMemo(
-    () => Object.keys(boardConfig).every((key) => !key.startsWith("unset")),
-    [boardConfig]
-  );
+  const isBoardReady = useMemo(() => {
+    console.log(boardConfig);
+    console.log(
+      Object.keys(boardConfig).every((key) => !key.startsWith("unset"))
+    );
+    return Object.keys(boardConfig).every((key) => !key.startsWith("unset"));
+  }, [boardConfig]);
 
   const resetBoard = () => {
     setBoartConfig({ ...defaultConfig });
-    setEditable(true);
+    setIsEdiding(true);
+  };
+
+  const opponentBoardClick = (id) => {
+    if (isCurrentTurn && !gameOver) {
+      const [row, col] = id.split(":").map((e) => Number(e));
+      console.log(row, col);
+      const cell = opponentBoard[row][col];
+      if (!cell.revealed) {
+        setIsCurrentTurn(false);
+        sendMessage({
+          messageType: "move",
+          body: { row, col },
+        });
+      }
+    }
   };
 
   return (
@@ -153,25 +237,38 @@ function App() {
           justifyContent: "center",
         }}
       >
-        {editable ? (
+        {isEditing ? (
           <BoardEditor
             size={[BOARD_SIZE, BOARD_SIZE]}
             boardConfig={boardConfig}
             setBoardConfig={setBoartConfig}
-            editable={editable}
+            isEditing={isEditing}
           />
         ) : (
-          <Board size={[BOARD_SIZE, BOARD_SIZE]} />
+          <Board
+            disabled={isCurrentTurn}
+            board={currentBoard}
+            footerText="Your board"
+          />
         )}
-        {isBoardReady && !editable && (
+        {isBoardReady && !isEditing && (
           <div className="control-panel">
-            <div className="opponent-container">
-              {/* <span className="">Find an opponent</span> */}
-              {connecting && <Spinner />}
-              <button onClick={handlePlayerPickerClick}>
-                {connecting ? "Cancel" : "Find an opponent"}
-              </button>
-            </div>
+            {gameStarted ? (
+              <Board
+                disabled={!isCurrentTurn}
+                board={opponentBoard}
+                onCellClick={opponentBoardClick}
+                footerText="Opponent's board"
+              />
+            ) : (
+              <div className="opponent-container">
+                {/* <span className="">Find an opponent</span> */}
+                {connecting && <Spinner />}
+                <button onClick={handlePlayerPickerClick}>
+                  {connecting ? "Cancel" : "Find an opponent"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -180,10 +277,10 @@ function App() {
         <button
           disabled={!isBoardReady || gameStarted}
           onClick={() => {
-            setEditable((isEditable) => !isEditable);
+            setIsEdiding((editing) => !editing);
           }}
         >
-          {editable ? "Ready" : "Not ready"}
+          {isEditing ? "Ready" : "Not ready"}
         </button>
         <button
           onClick={() =>

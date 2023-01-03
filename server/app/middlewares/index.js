@@ -1,9 +1,10 @@
-const { READY_STATE } = require("../config/constants");
+const { READY_STATE, cellState, ORIENTATION } = require("../config/constants");
 const { getOpponentId } = require("../helpers/utils");
 const {
   validateMessage,
   validateBoardConfig,
   validateMove,
+  isValidCoordinates,
 } = require("../helpers/validator");
 const {
   popPlayer,
@@ -20,7 +21,7 @@ class DataHandler {
   currentPlayerId;
   currentSocket;
   gameObj;
-  opponetId;
+  opponentId;
   opponentSocket;
 
   constructor(socket, playerId, gameObj = null) {
@@ -28,20 +29,24 @@ class DataHandler {
     this.currentPlayerId = playerId;
     this.gameObj = gameObj;
     if (gameObj) {
-      this.opponetId = getOpponentId(gameObj, playerId);
-      this.opponentSocket = getPlayerSocket(this.opponetId);
+      this.opponentId = getOpponentId(gameObj, playerId);
+      this.opponentSocket = getPlayerSocket(this.opponentId);
     }
   }
 
   setGame = (gameObj) => {
-    this.opponetId = getOpponentId(gameObj, this.currentPlayerId);
-    this.opponentSocket = getPlayerSocket(this.opponetId);
+    this.opponentId = getOpponentId(gameObj, this.currentPlayerId);
+    this.opponentSocket = getPlayerSocket(this.opponentId);
   };
 
   endGame = (statusCode) => {
     console.trace("end game trace");
     this.currentSocket.close(statusCode);
     this.opponentSocket.close(statusCode);
+
+    removeGame(this.gameObj.id);
+    removePlayerSocket(this.currentPlayerId);
+    removePlayerSocket(this.opponentSocket);
   };
 
   broadcastMessages = (currentMessageObj, opponentMessageObj) => {
@@ -69,7 +74,6 @@ class DataHandler {
   };
 
   handleClose = (statusCode) => {
-    // console.log(statusCode, this.gameObj);
     console.trace("close trace");
     if (this.gameObj) {
       this.endGame(statusCode);
@@ -100,7 +104,6 @@ class DataHandler {
   };
 
   handleBoard = (body) => {
-    console.log(body);
     const currentBoard = validateBoardConfig(body);
     if (!currentBoard) return this.handleClose(1003);
     const opponent = popPlayer();
@@ -125,7 +128,7 @@ class DataHandler {
         p2: { id: opponentId, socket: opponentSocket, board: opponentBoard },
       });
 
-      this.opponetId = opponentId;
+      this.opponentId = opponentId;
       this.opponentSocket = opponentSocket;
       this.gameObj = gameObj;
 
@@ -158,27 +161,128 @@ class DataHandler {
     // }
   };
 
-  handleMove = (message) => {
-    const { valid, value: messageObj } = validateMessage(message);
-
-    if (!valid) {
-      // return console.log("Invalid message", message);
-      return this.endGame(1003);
-    }
-    const { body } = messageObj;
-
+  handleMove = (body) => {
     const currentPlayerReadyState =
       this.gameObj.players[this.currentPlayerId].readyState;
     const isCurrentPlayerTurn = this.gameObj.turn === this.currentPlayerId;
-    if (currentPlayerReadyState === READY_STATE.READY && isCurrentPlayerTurn) {
-      // this.handleMove(body);
-      const { board } = this.gameObj.players[this.currentPlayerId];
+    if (isCurrentPlayerTurn) {
+      const opponentPlayerObj = this.gameObj.players[this.opponentId];
+      const { board: opponentBoard } = opponentPlayerObj;
+      if (!validateMove(body, opponentBoard)) return this.handleClose(1003);
 
-      if (!validateMove(body, board)) this.endGame();
+      this.consumeMove(body, opponentPlayerObj);
     } else if (currentPlayerReadyState === READY_STATE.CLOSED) {
       this.handleClose(1001);
     } else {
       this.handleClose(1003);
+    }
+  };
+
+  consumeMove = (body, opponentPlayerObj) => {
+    const { row, col } = body;
+
+    const { board } = opponentPlayerObj;
+
+    board[row][col].state = cellState.REVEALED;
+
+    const { ship } = board[row][col];
+    const revealedCells = [{ row, col, isShip: !!ship }];
+
+    let isCurrentPlayerTurn = false;
+
+    if (ship) {
+      isCurrentPlayerTurn = true;
+      ship.health -= 1;
+      for (let i of [-1, 1]) {
+        for (let j of [-1, 1]) {
+          const diagonalRow = row + i;
+          const diagonalCol = col + j;
+          if (
+            isValidCoordinates(diagonalRow, diagonalCol) &&
+            board[diagonalRow][diagonalCol].state !== cellState.REVEALED
+          ) {
+            board[diagonalRow][diagonalCol].state = cellState.REVEALED;
+            revealedCells.push({
+              row: diagonalRow,
+              col: diagonalCol,
+              isShip: !!board[diagonalRow][diagonalCol].ship,
+            });
+          }
+        }
+      }
+
+      if (ship.health === 0) {
+        opponentPlayerObj.shipsLeftCount -= 1;
+        const {
+          position: [startRow, startCol],
+          size,
+          orientation,
+        } = ship;
+
+        const endRow =
+          orientation === ORIENTATION.HORIZONTAL
+            ? startRow + 1
+            : startRow + size;
+        const endCol =
+          orientation === ORIENTATION.VERTICAL ? startCol + 1 : startCol + size;
+
+        for (let i = startRow - 1; i <= endRow; ++i) {
+          for (let j = startCol - 1; j <= endCol; ++j) {
+            if (
+              isValidCoordinates(i, j) &&
+              board[i][j].state !== cellState.REVEALED
+            ) {
+              board[i][j].state = cellState.REVEALED;
+              revealedCells.push({
+                row: i,
+                col: j,
+                isShip: !!board[i][j].ship,
+              });
+            }
+          }
+        }
+      }
+    }
+    console.log('opponentPlayerObj.shipsLeftCount', opponentPlayerObj.shipsLeftCount);
+
+    this.gameObj.turn = isCurrentPlayerTurn
+      ? this.currentPlayerId
+      : this.opponentId;
+
+    this.broadcastMessages(
+      {
+        messageType: "reveal",
+        body: {
+          isCurrentPlayerTurn,
+          isCurrentBoard: false,
+          revealedCells,
+        },
+      },
+      {
+        messageType: "reveal",
+        body: {
+          isCurrentPlayerTurn: !isCurrentPlayerTurn,
+          revealedCells,
+          isCurrentBoard: true,
+        },
+      }
+    );
+
+    if (opponentPlayerObj.shipsLeftCount === 0) {
+      this.broadcastMessages(
+        {
+          messageType: "gameOver",
+          body: {
+            isWinner: true,
+          },
+        },
+        {
+          messageType: "gameOver",
+          body: {
+            isWinner: false,
+          },
+        }
+      );
     }
   };
 }

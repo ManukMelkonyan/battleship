@@ -1,5 +1,5 @@
 const { v4: uuid } = require("uuid");
-const { READY_STATE } = require("../config/constants");
+const { READY_STATE, sizeCountMap } = require("../config/constants");
 
 const { randomizeFirstPlayer } = require("../helpers/utils");
 
@@ -33,6 +33,10 @@ const pushPlayer = (id, board) => {
 };
 
 const createGame = ({ p1, p2 }) => {
+  const shipCount = Object.values(sizeCountMap).reduce(
+    (total, cnt) => total + cnt,
+    0
+  );
   const firstPlayer = randomizeFirstPlayer(p1.id, p2.id);
   const gameId = `game:${uuid()}`;
   const game = {
@@ -43,11 +47,13 @@ const createGame = ({ p1, p2 }) => {
         socket: p1.socket,
         board: p1.board,
         readyState: READY_STATE.PENDING_BOARD,
+        shipsLeftCount: shipCount,
       },
       [p2.id]: {
         socket: p2.socket,
         board: p2.board,
         readyState: READY_STATE.PENDING_BOARD,
+        shipsLeftCount: shipCount,
       },
     },
   };
