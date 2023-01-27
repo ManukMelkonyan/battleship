@@ -1,6 +1,7 @@
 const { v4: uuid } = require("uuid");
 
 const { randomizeFirstPlayer } = require("../helpers/utils");
+const { sizeCountMap } = require('../config/constants');
 
 const playersQueue = [];
 const playerIdSocketMap = {};

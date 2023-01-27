@@ -4,64 +4,16 @@ import Board from "./Board";
 import BoardEditor from "./BoardEditor";
 import Modal from "react-modal";
 
-import { ORIENTATION, BOARD_SIZE } from "./constants";
+import { BOARD_SIZE, serverUrl, sizeCountMap } from "./constants";
 import texts from "./texts.json";
 
 import { ReactComponent as Spinner } from "./Assets/spinner.svg";
+import { constructConfigFromCells, generateBoard, getBoardCells, getInitialBoardConfig } from "./BoardHelpers";
 
-const defaultSizeCountMap = {
-  4: 1,
-  3: 2,
-  2: 3,
-  1: 4,
-};
-
-const getBoardCells = (boardConfig) => {
-  const board = new Array(BOARD_SIZE)
-    .fill()
-    .map(() =>
-      new Array(BOARD_SIZE)
-        .fill()
-        .map(() => ({ revealed: false, isShip: false }))
-    );
-
-  for (const [key, value] of Object.entries(boardConfig)) {
-    const [row, col] = key.split(":").map((e) => Number(e));
-    const { size, orientation } = value;
-    if (orientation === ORIENTATION.HORIZONTAL) {
-      for (let j = 0; j < size; ++j) {
-        board[row][col + j].isShip = true;
-      }
-    } else if (orientation === ORIENTATION.VERTICAL) {
-      for (let i = 0; i < size; ++i) {
-        board[row + i][col].isShip = true;
-      }
-    }
-  }
-  return board;
-};
-
-const getInitialBoardConfig = (sizeCountMap) => {
-  const config = {};
-  let i = 0;
-  for (const key in sizeCountMap) {
-    const count = sizeCountMap[key];
-    const size = Number(key);
-    for (let j = 0; j < count; ++j) {
-      const id = `unset:${i}`;
-      config[id] = {
-        size,
-        orientation: ORIENTATION.HORIZONTAL,
-      };
-      ++i;
-    }
-  }
-  return config;
-};
 
 function App() {
   const defaultConfig = useMemo(
-    () => getInitialBoardConfig(defaultSizeCountMap),
+    () => getInitialBoardConfig(sizeCountMap),
     []
   );
   const [boardConfig, setBoartConfig] = useState(defaultConfig);
@@ -127,7 +79,7 @@ function App() {
 
   const connectToServer = () => {
     setConnecting(true);
-    const ws = new WebSocket("ws://localhost:8080");
+    const ws = new WebSocket(serverUrl);
     setWebSocket(ws);
   };
 
@@ -261,48 +213,7 @@ function App() {
         <button
           disabled={gameStarted || connecting}
           onClick={() =>
-            setBoartConfig({
-              "4:7": {
-                size: 3,
-                orientation: "HORIZONTAL",
-              },
-              "5:1": {
-                size: 2,
-                orientation: "HORIZONTAL",
-              },
-              "0:8": {
-                size: 2,
-                orientation: "HORIZONTAL",
-              },
-              "0:5": {
-                size: 2,
-                orientation: "VERTICAL",
-              },
-              "0:0": {
-                size: 4,
-                orientation: "VERTICAL",
-              },
-              "0:2": {
-                size: 1,
-                orientation: "HORIZONTAL",
-              },
-              "2:2": {
-                size: 1,
-                orientation: "HORIZONTAL",
-              },
-              "2:7": {
-                size: 1,
-                orientation: "HORIZONTAL",
-              },
-              "2:9": {
-                size: 1,
-                orientation: "HORIZONTAL",
-              },
-              "5:4": {
-                size: 3,
-                orientation: "VERTICAL",
-              },
-            })
+            setBoartConfig(constructConfigFromCells(generateBoard()))
           }
         >
           Randomize
