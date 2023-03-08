@@ -55,6 +55,7 @@ function App() {
   const handleGameStart = (body) => {
     const { isCurrentPlayerTurn } = body;
     setGameStarted(true);
+    setGameOver(false);
     setIsCurrentTurn(isCurrentPlayerTurn);
   };
 
@@ -153,7 +154,7 @@ function App() {
       setConnecting(false);
       if (gameStarted) {
         setGameStarted(false);
-        setModalText(texts.connection_lost_text);
+        if (modalText) setModalText(texts.connection_lost_text);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
